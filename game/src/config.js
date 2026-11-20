@@ -1,61 +1,22 @@
-// Every tuning number and colour in one place. The playfield is a fixed 1280x720 logical area;
-// the renderer scales it to the window, so no rule below depends on the screen size.
-
-export const FIELD = { width: 1280, height: 720, groundY: 664 };
-
-/** The simulation's fixed step, in seconds: 60 updates a second whatever the display's rate. */
-export const STEP = 1 / 60;
-
-export const PLAYER = {
-  width: 72,
-  height: 24,
-  speed: 560,
-  invulnerable: 1.5,
-};
-
-export const LIVES = 3;
-
-export const BLOCK = {
-  minWidth: 40,
-  maxWidth: 110,
-  height: 36,
-  speed: 240,
-  speedPerLevel: 30,
-  speedJitter: 90,
-  interval: 0.55,
-  intervalScale: 0.88,
-  minInterval: 0.14,
-  dodgePoints: 1,
-};
-
-export const COIN = {
-  size: 24,
-  speed: 190,
-  speedPerLevel: 14,
-  interval: 1.4,
-  intervalJitter: 0.8,
-  points: 10,
-};
-
-/** Seconds of play per level, and the last level: speeds and spawn rates stop growing there. */
-export const LEVEL = { seconds: 12, max: 12 };
-
-/** How many falling things can exist at once; the pool is allocated once, at boot. */
-export const POOL_SIZE = 64;
-
+// config.js — tuning constants and the Coral Bay palette for Neon Harbor.
+export const WORLD = { w: 4000, h: 3000 };
 export const PALETTE = {
-  backdrop: '#11141b',
-  sky: '#1b1f2a',
-  ground: '#2a3040',
-  player: '#4fc3f7',
-  block: '#e5534b',
-  coin: '#f2c94c',
-  panel: '#252b38',
-  text: '#eef1f5',
-  muted: '#8b93a3',
+  sky: '#1a1033', asphalt: '#2b2f3a', roadLine: '#f5d76e', sidewalk: '#8a8f9e',
+  grass: '#2e7d4f', sand: '#f2d492', ocean: '#0e6b8a', ocean2: '#1299b8',
+  neonPink: '#ff2e88', neonCyan: '#00e5ff', neonYellow: '#ffe600', neonPurple: '#b967ff',
+  building: ['#3a3f5c','#4a3555','#2f4a5c','#5c3a4a','#3d5c3a','#554a2f','#2f3a6b','#6b2f4a'],
+  carColors: ['#e53935','#fb8c00','#fdd835','#43a047','#1e88e5','#8e24aa','#ec407a','#00acc1','#f5f5f5','#37474f'],
 };
-
-export const FONT = 'system-ui, -apple-system, "Segoe UI", sans-serif';
-
-/** Where the best score is kept between visits (this browser only). */
-export const BEST_KEY = 'block-dodger.best';
+export const TUNING = {
+  playerSpeed: 165, sprintMult: 1.65, playerRadius: 13,
+  carAccel: 340, carMaxSpeed: 430, carReverse: 130, carTurn: 2.6,
+  trafficCount: 24, pedCount: 42, packageCount: 20, packageReward: 250,
+  bustedRadius: 46, bustedTime: 2.2,
+};
+export const PLACES = {
+  garage: { x: 620, y: 1620, label: "Marco's Garage" },
+  marina: { x: 3520, y: 1450, label: 'Coral Bay Marina' },
+  policeStation: { x: 1500, y: 950, label: 'CBPD Station' },
+  hospital: { x: 2450, y: 1950, label: 'Coral Bay Hospital' },
+  marcoSpot: { x: 3480, y: 1520, label: 'Marco Vale' },
+};

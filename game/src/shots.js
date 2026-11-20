@@ -1,79 +1,49 @@
-// The screenshot scenes behind ?shot=start|play|end. Each one plays the real rules forward from a
-// fresh world for a fixed number of steps, steered by a simple autopilot (look ahead each way the
-// paddle could move, keep clear of blocks, chase the lowest coin when that is safe), so the frame
-// is what a short game really looks like and the same seed always gives the same frame.
-import { FIELD, PLAYER, STEP } from './config.js';
-import { EVENT_OVER, KIND_BLOCK } from './world.js';
-import { SCREEN_OVER, SCREEN_PLAY, SCREEN_TITLE } from './render.js';
+// shots.js — deterministic staged scenes for screenshots via ?shot=<name>.
+// Each setup positions the player, cars, police and dialog so a headless capture shows real gameplay.
+import { PLACES } from './config.js';
 
-const START_SECONDS = 5;
-const PLAY_SECONDS = 26;
-const END_LIMIT_SECONDS = 600;
-/**
- * How far ahead, in seconds, the autopilot checks each way it could move: the play scene's pilot
- * looks well ahead and keeps all its lives; the end scene's looks only a moment ahead, so it is
- * caught out once the blocks speed up, as a hurried player is.
- */
-const HORIZON_PLAY = 0.7;
-const HORIZON_END = 0.25;
-const SAMPLE = 1 / 30;
-const DIRECTIONS = [0, -1, 1];
-/** Extra room, each side, it keeps between the paddle and a block. */
-const MARGIN = 10;
-
-/** Seconds until moving in `direction` (-1, 0, 1) runs the paddle into a block; Infinity when it never does. */
-function timeToHit(state, direction, horizon) {
-  const player = state.player;
-  for (let t = SAMPLE; t <= horizon; t += SAMPLE) {
-    const x = Math.min(FIELD.width - player.width, Math.max(0, player.x + direction * PLAYER.speed * t));
-    for (let index = 0; index < state.items.length; index += 1) {
-      const item = state.items[index];
-      if (!item.active || item.kind !== KIND_BLOCK) continue;
-      const y = item.y + item.speed * t;
-      if (y + item.height > player.y && y < player.y + player.height && item.x < x + player.width + MARGIN && item.x + item.width > x - MARGIN) return t;
-    }
-  }
-  return Infinity;
+export function isShotMode() {
+  return new URLSearchParams(location.search).get('shot');
 }
-
-/** Of the safe ways to move, the one toward the lowest coin (or the centre); else the one that is hit last. */
-function autopilot(state, horizon) {
-  const player = state.player;
-  let coin = null;
-  for (let index = 0; index < state.items.length; index += 1) {
-    const item = state.items[index];
-    if (item.active && item.kind !== KIND_BLOCK && (coin === null || item.y > coin.y)) coin = item;
-  }
-  const target = coin === null ? FIELD.width / 2 : coin.x + coin.width / 2;
-  const centre = player.x + player.width / 2;
-  const wanted = target > centre + 8 ? 1 : target < centre - 8 ? -1 : 0;
-  let best = wanted;
-  let bestTime = timeToHit(state, wanted, horizon);
-  for (let index = 0; index < DIRECTIONS.length && bestTime !== Infinity; index += 1) {
-    const time = timeToHit(state, DIRECTIONS[index], horizon);
-    if (time > bestTime) {
-      bestTime = time;
-      best = DIRECTIONS[index];
+export function applyShot(name, S) {
+  const { player, police, missions } = S;
+  S.mode = 'playing';
+  if (name === 'cover') {
+    S.dayT = 0.42; // golden sunset
+    const car = S.cars.find((c) => c.kind === 'convertible') || S.cars[0];
+    car.x = 3350; car.y = 1500; car.angle = Math.PI / 2; car.speed = 190; car.parked = false;
+    player.inCar = car; car.driver = 'player'; player.cash = 1840; missions.packagesFound = 3;
+    missions.active = { id: 0, title: 'Free Roam', target: { x: PLACES.garage.x, y: PLACES.garage.y, label: "Marco's garage" } };
+    S.shotObjective = "Cruise Ocean Drive — deliver the ride to Marco's garage";
+  } else if (name === 'chase') {
+    S.dayT = 0.3;
+    const car = S.cars.find((c) => c.kind === 'sport') || S.cars[0];
+    car.x = 1400; car.y = 1400; car.angle = 0.5; car.speed = 300; car.parked = false;
+    player.inCar = car; car.driver = 'player'; player.cash = 2650;
+    police.setWanted(3);
+    // converging police cars placed deterministically around the intersection
+    const spots = [[1260, 1290, 0.6], [1560, 1330, 2.8], [1420, 1580, -1.4], [1180, 1480, 0.1]];
+    for (const [x, y, a] of spots) {
+      // reuse police update spawner by pre-seeding cars through the system array
+      police.cars.push({ x, y, angle: a, speed: 240, w: 44, h: 22, kind: 'police', color: '#fff', health: 100, smoke: 0, driver: 'cop' });
     }
+    S.shotObjective = 'Lose the heat!';
+  } else if (name === 'mission') {
+    S.dayT = 0.28;
+    player.x = PLACES.marcoSpot.x - 36; player.y = PLACES.marcoSpot.y + 10; player.angle = 0; player.cash = 620;
+    missions.dialog = "Rook. I'm Marco Vale. I fix problems in Coral Bay — and right now, you're my favourite solution. First job: a coral-red sports car waits on Ocean Drive. Bring it to my garage.";
+    S.shotObjective = 'Talk to Marco Vale — First Wheels';
+    // a few peds nearby
+    S.peds.slice(0, 6).forEach((p, i) => { p.x = PLACES.marcoSpot.x - 90 + i * 36; p.y = PLACES.marcoSpot.y - 60 + (i % 3) * 34; });
+  } else if (name === 'night') {
+    S.dayT = 0.92; // night
+    player.x = 1420; player.y = 1332; player.angle = 0.4; player.cash = 3110; missions.packagesFound = 7;
+    police.setWanted(1);
+    police.officers.push({ x: 1545, y: 1415, angle: 2.6, hp: 40, speed: 128 });
+    S.shotObjective = 'Night run — stay out of trouble (or don\'t)';
+    S.peds.slice(0, 5).forEach((p, i) => { p.x = 1330 + i * 44; p.y = 1470 + (i % 2) * 26; });
   }
-  return best;
-}
-
-/**
- * Set `world` to the named scene (start, play or end; any other name is start) and return the
- * screen to draw over it and the best score to show.
- */
-export function stageShot(name, world) {
-  world.reset();
-  if (name !== 'play' && name !== 'end') {
-    for (let index = 0; index < START_SECONDS / STEP; index += 1) world.step(STEP, 0, true);
-    return { screen: SCREEN_TITLE, best: 0 };
-  }
-  const limit = name === 'end' ? END_LIMIT_SECONDS : PLAY_SECONDS;
-  const horizon = name === 'end' ? HORIZON_END : HORIZON_PLAY;
-  for (let index = 0; index < limit / STEP; index += 1) {
-    if (world.step(STEP, autopilot(world.state, horizon), false) & EVENT_OVER) break;
-  }
-  const over = world.state.lives === 0;
-  return { screen: over ? SCREEN_OVER : SCREEN_PLAY, best: world.state.score };
+  // pre-step the world so traffic is moving and the scene feels alive
+  for (let i = 0; i < 40; i++) S.stepWorld(1 / 30, true);
+  if (name === 'chase') { /* keep staged police positions after pre-step drift */ }
 }
